@@ -27,6 +27,11 @@ export default function AdminPage() {
         localStorage.removeItem('aura_auth');
         router.replace('/');
     };
+    
+    const handleSchoolClick = (schoolId: string) => {
+        localStorage.setItem('aura_auth', JSON.stringify({ schoolId: schoolId }));
+        router.push('/dashboard');
+    };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
@@ -54,7 +59,7 @@ export default function AdminPage() {
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl">Registered Schools</CardTitle>
                         <CardDescription>
-                            A list of all registered schools in the system.
+                            A list of all registered schools in the system. Click on a school to view their dashboard.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -80,7 +85,7 @@ export default function AdminPage() {
                                         ))
                                     ) : schools.length > 0 ? (
                                         schools.map((school) => (
-                                            <TableRow key={school.id}>
+                                            <TableRow key={school.id} onClick={() => handleSchoolClick(school.id)} className="cursor-pointer hover:bg-muted/50">
                                                 <TableCell className="font-mono">{school.id}</TableCell>
                                                 <TableCell className="font-medium">{school.name}</TableCell>
                                                 <TableCell>{school.addedDate}</TableCell>
