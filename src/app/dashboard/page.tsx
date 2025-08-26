@@ -58,7 +58,7 @@ export default function DashboardPage() {
             return;
         }
         const parsedAuth = JSON.parse(authData);
-        let currentSchoolId = null;
+        let currentSchoolId: string | null = null;
 
         if (parsedAuth.schoolId === 'admin') {
             setIsAdmin(true);
@@ -77,18 +77,20 @@ export default function DashboardPage() {
 
         setTimeout(() => {
             const storedSchools = JSON.parse(localStorage.getItem('aura_schools') || '[]');
-            let storedCards = JSON.parse(localStorage.getItem('aura_cards') || '[]');
+            let allCards = JSON.parse(localStorage.getItem('aura_cards') || '[]');
             const storedTransactions = JSON.parse(localStorage.getItem('aura_transactions') || '[]');
             
-            // Pre-populate cards if none exist
-            if (storedCards.length === 0 && currentSchoolId) {
-                const schoolCards = storedSchools.flatMap((school: School) => generateInitialCards(school.id));
-                localStorage.setItem('aura_cards', JSON.stringify(schoolCards));
-                storedCards = schoolCards;
+            if (currentSchoolId) {
+                const schoolCardsExist = allCards.some((card: Card) => card.schoolId === currentSchoolId);
+                if (!schoolCardsExist) {
+                    const newSchoolCards = generateInitialCards(currentSchoolId);
+                    allCards = [...allCards, ...newSchoolCards];
+                    localStorage.setItem('aura_cards', JSON.stringify(allCards));
+                }
             }
-
+            
             setSchools(storedSchools);
-            setCards(storedCards);
+            setCards(allCards);
             setTransactions(storedTransactions);
             setLoading(false);
         }, 1000);
@@ -548,5 +550,3 @@ export default function DashboardPage() {
         </>
     );
 }
-
-    
