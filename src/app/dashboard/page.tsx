@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { School, Card, Transaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle } from 'lucide-react';
+import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -20,6 +22,7 @@ export default function DashboardPage() {
     
     const [loading, setLoading] = useState(true);
     const [authSchoolId, setAuthSchoolId] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
     
     const [cardIdInput, setCardIdInput] = useState('');
     const [searchedCard, setSearchedCard] = useState<Card | null>(null);
@@ -40,10 +43,21 @@ export default function DashboardPage() {
         }
         const parsedAuth = JSON.parse(authData);
         if (parsedAuth.schoolId === 'admin') {
-            router.replace('/admin');
-            return;
+            setIsAdmin(true);
+            // Admin can view any school, but we need one selected.
+            // For now, let's not set an authSchoolId for admin, they'll need to select one.
+            // Or maybe the flow is they click from admin page?
+            // The flow is they click from admin page, which sets the schoolId.
+             const adminSelectedSchoolId = JSON.parse(localStorage.getItem('aura_admin_view') || 'null');
+             if (!adminSelectedSchoolId) {
+                // router.replace('/admin'); // maybe not ideal, they can't go to /dashboard directly
+                // return;
+             }
+             setAuthSchoolId(adminSelectedSchoolId);
+
+        } else {
+             setAuthSchoolId(parsedAuth.schoolId);
         }
-        setAuthSchoolId(parsedAuth.schoolId);
 
         setTimeout(() => {
             const storedSchools = JSON.parse(localStorage.getItem('aura_schools') || '[]');
@@ -57,11 +71,24 @@ export default function DashboardPage() {
     }, [router]);
 
     const loggedInSchool = useMemo(() => schools.find(s => s.id === authSchoolId), [schools, authSchoolId]);
+    
+    const schoolTransactions = useMemo(() => {
+        if (!loggedInSchool) return [];
+        return transactions
+            .filter(tx => tx.schoolId === loggedInSchool.id)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [transactions, loggedInSchool]);
 
     const handleLogout = () => {
         localStorage.removeItem('aura_auth');
+        localStorage.removeItem('aura_admin_view');
         router.replace('/');
     };
+    
+    const handleAdminBack = () => {
+        localStorage.removeItem('aura_admin_view');
+        router.replace('/admin');
+    }
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
@@ -69,6 +96,13 @@ export default function DashboardPage() {
             currency: 'INR',
             minimumFractionDigits: 2,
         }).format(amount);
+    };
+    
+    const formatTimestamp = (isoString: string) => {
+        return new Date(isoString).toLocaleString('en-IN', {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        });
     };
 
     const handleCardSearch = () => {
@@ -192,10 +226,16 @@ export default function DashboardPage() {
                         <Gem className="h-8 w-8 text-primary" />
                         <h1 className="text-3xl font-headline tracking-tight">Aura Dashboard</h1>
                     </div>
-                    <Button variant="ghost" onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                    </Button>
+                     {isAdmin ? (
+                        <Button variant="outline" onClick={handleAdminBack}>
+                           Back to Admin
+                        </Button>
+                    ) : (
+                         <Button variant="ghost" onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Logout
+                        </Button>
+                    )}
                 </header>
                 
                 <UICard className="shadow-lg border mb-8">
@@ -217,7 +257,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </UICard>
                 
-                <UICard className="shadow-lg border">
+                <UICard className="shadow-lg border mb-8">
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl">Card Management</CardTitle>
                         <CardDescription>Enter a student card ID to view details or add funds.</CardDescription>
@@ -272,6 +312,63 @@ export default function DashboardPage() {
                                 </CardContent>
                             </UICard>
                         )}
+                    </CardContent>
+                </UICard>
+
+                <UICard className="shadow-lg border">
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><History/> Transaction History</CardTitle>
+                        <CardDescription>
+                            A log of all funds added to student cards at this school.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date & Time</TableHead>
+                                        <TableHead>Card ID</TableHead>
+                                        <TableHead>Balance Before</TableHead>
+                                        <TableHead>Amount Added</TableHead>
+                                        <TableHead>Balance After</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                     {loading ? (
+                                        Array.from({ length: 5 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                     ) : schoolTransactions.length > 0 ? (
+                                        schoolTransactions.map((tx) => (
+                                            <TableRow key={tx.id}>
+                                                <TableCell>{formatTimestamp(tx.timestamp)}</TableCell>
+                                                <TableCell className="font-mono">{tx.cardId}</TableCell>
+                                                <TableCell>{formatCurrency(tx.balanceBefore)}</TableCell>
+                                                <TableCell className="font-medium text-green-600">
+                                                   +{formatCurrency(tx.amount)}
+                                                </TableCell>
+                                                <TableCell className="font-bold">
+                                                    {formatCurrency(tx.balanceAfter)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                     ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center h-24">
+                                                No transactions have been recorded for this school yet.
+                                            </TableCell>
+                                        </TableRow>
+                                     )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </UICard>
 
