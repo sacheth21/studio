@@ -76,7 +76,7 @@ export function AuthForm() {
     setLoading(true);
     setTimeout(() => {
         const schools: School[] = JSON.parse(localStorage.getItem('aura_schools') || '[]');
-        const newId = `SCH-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const newId = (111 + schools.length).toString();
         const newSchool: School = {
             id: newId,
             name: values.name,
