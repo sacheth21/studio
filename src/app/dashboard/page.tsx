@@ -5,13 +5,26 @@ import { useRouter } from 'next/navigation';
 import { School, Card, Transaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone } from 'lucide-react';
+import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const generateInitialCards = (schoolId: string) => {
+    return Array.from({ length: 20 }, (_, i) => {
+        const cardId = (1001 + i).toString();
+        return {
+            id: cardId,
+            schoolId: schoolId,
+            name: `Student ${cardId}`,
+            phoneNumbers: [],
+            balance: 0,
+        };
+    });
+};
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -45,21 +58,35 @@ export default function DashboardPage() {
             return;
         }
         const parsedAuth = JSON.parse(authData);
+        let currentSchoolId = null;
+
         if (parsedAuth.schoolId === 'admin') {
             setIsAdmin(true);
-            const adminSelectedSchoolId = JSON.parse(localStorage.getItem('aura_admin_view') || 'null');
-             if (!adminSelectedSchoolId) {
+            const adminSelectedSchoolId = localStorage.getItem('aura_admin_view');
+             if (adminSelectedSchoolId) {
+                currentSchoolId = JSON.parse(adminSelectedSchoolId);
+             } else {
+                 router.replace('/admin');
+                 return;
              }
-             setAuthSchoolId(adminSelectedSchoolId);
-
         } else {
-             setAuthSchoolId(parsedAuth.schoolId);
+             currentSchoolId = parsedAuth.schoolId;
         }
+        
+        setAuthSchoolId(currentSchoolId);
 
         setTimeout(() => {
             const storedSchools = JSON.parse(localStorage.getItem('aura_schools') || '[]');
-            const storedCards = JSON.parse(localStorage.getItem('aura_cards') || '[]');
+            let storedCards = JSON.parse(localStorage.getItem('aura_cards') || '[]');
             const storedTransactions = JSON.parse(localStorage.getItem('aura_transactions') || '[]');
+            
+            // Pre-populate cards if none exist
+            if (storedCards.length === 0 && currentSchoolId) {
+                const schoolCards = storedSchools.flatMap((school: School) => generateInitialCards(school.id));
+                localStorage.setItem('aura_cards', JSON.stringify(schoolCards));
+                storedCards = schoolCards;
+            }
+
             setSchools(storedSchools);
             setCards(storedCards);
             setTransactions(storedTransactions);
@@ -78,12 +105,10 @@ export default function DashboardPage() {
 
     const handleLogout = () => {
         localStorage.removeItem('aura_auth');
-        localStorage.removeItem('aura_admin_view');
         router.replace('/');
     };
     
     const handleAdminBack = () => {
-        localStorage.removeItem('aura_admin_view');
         router.replace('/admin');
     }
 
@@ -113,18 +138,12 @@ export default function DashboardPage() {
         if (foundCard) {
             setSearchedCard(foundCard);
         } else {
-            const newCard: Card = {
-                id: cardIdInput,
-                schoolId: authSchoolId!,
-                name: "New Student",
-                phoneNumbers: [],
-                balance: 0,
-            };
-            const updatedCards = [...cards, newCard];
-            setCards(updatedCards);
-            localStorage.setItem('aura_cards', JSON.stringify(updatedCards));
-            setSearchedCard(newCard);
-            toast({ title: 'New Card Created', description: `Card ID ${cardIdInput} has been registered.` });
+            setSearchedCard(null);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Card Not Found', 
+                description: `Card ID ${cardIdInput} is not registered for this school.` 
+            });
         }
     };
     
@@ -300,7 +319,7 @@ export default function DashboardPage() {
                 <UICard className="shadow-lg border mb-8">
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl">Card Management</CardTitle>
-                        <CardDescription>Enter a student card ID to view details or add funds.</CardDescription>
+                        <CardDescription>Enter a registered student card ID to view details or add funds.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-center gap-2 mb-6">
@@ -308,9 +327,11 @@ export default function DashboardPage() {
                                 placeholder="Enter Card ID" 
                                 value={cardIdInput}
                                 onChange={(e) => setCardIdInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleCardSearch()}
                             />
                             <Button onClick={handleCardSearch}>
-                                {isSubmitting ? <Loader2 className="animate-spin" /> : "Search"}
+                                {isSubmitting ? <Loader2 className="animate-spin" /> : <Search />}
+                                <span className="sr-only sm:not-sr-only sm:ml-2">Search</span>
                             </Button>
                         </div>
 
@@ -527,3 +548,5 @@ export default function DashboardPage() {
         </>
     );
 }
+
+    
