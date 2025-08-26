@@ -131,6 +131,9 @@ export default function DashboardPage() {
         
         setIsSubmitting(true);
 
+        const balanceBefore = searchedCard.balance;
+        const balanceAfter = balanceBefore + amount;
+
         // 1. Deduct from school wallet
         const updatedSchools = schools.map(s => 
             s.id === loggedInSchool.id ? { ...s, walletBalance: s.walletBalance - amount } : s
@@ -138,7 +141,7 @@ export default function DashboardPage() {
 
         // 2. Add to card balance
         const updatedCards = cards.map(c =>
-            c.id === searchedCard.id ? { ...c, balance: c.balance + amount } : c
+            c.id === searchedCard.id ? { ...c, balance: balanceAfter } : c
         );
         
         // 3. Create transaction record
@@ -149,7 +152,9 @@ export default function DashboardPage() {
             amount: amount,
             type: 'add_money_to_card',
             timestamp: new Date().toISOString(),
-            schoolName: loggedInSchool.name
+            schoolName: loggedInSchool.name,
+            balanceBefore: balanceBefore,
+            balanceAfter: balanceAfter
         };
         const updatedTransactions = [...transactions, newTransaction];
 
@@ -157,7 +162,7 @@ export default function DashboardPage() {
         setSchools(updatedSchools);
         setCards(updatedCards);
         setTransactions(updatedTransactions);
-        setSearchedCard(prev => prev ? { ...prev, balance: prev.balance + amount } : null);
+        setSearchedCard(prev => prev ? { ...prev, balance: balanceAfter } : null);
 
         localStorage.setItem('aura_schools', JSON.stringify(updatedSchools));
         localStorage.setItem('aura_cards', JSON.stringify(updatedCards));
@@ -273,7 +278,6 @@ export default function DashboardPage() {
             </div>
         </main>
         
-        {/* Add Money Dialog */}
         <Dialog open={isAddMoneyOpen} onOpenChange={setIsAddMoneyOpen}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
@@ -303,7 +307,6 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Update Name Dialog */}
         <Dialog open={isUpdateNameOpen} onOpenChange={setIsUpdateNameOpen}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>

@@ -22,4 +22,6 @@ export type Transaction = {
   type: 'add_money_to_card';
   timestamp: string; // ISO string for date and time
   schoolName: string;
+  balanceBefore: number;
+  balanceAfter: number;
 };

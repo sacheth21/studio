@@ -5,7 +5,7 @@ import { School, Transaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Gem, Loader2, LogOut, PlusCircle, History } from 'lucide-react';
+import { Gem, Loader2, LogOut, PlusCircle, History, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -194,7 +194,9 @@ export default function AdminPage() {
                                                     <TableHead>Date & Time</TableHead>
                                                     <TableHead>School</TableHead>
                                                     <TableHead>Card ID</TableHead>
-                                                    <TableHead>Amount</TableHead>
+                                                    <TableHead>Balance Before</TableHead>
+                                                    <TableHead>Amount Added</TableHead>
+                                                    <TableHead>Balance After</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -205,6 +207,8 @@ export default function AdminPage() {
                                                             <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                                                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                                             <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                                         </TableRow>
                                                     ))
                                                  ) : transactions.length > 0 ? (
@@ -213,12 +217,18 @@ export default function AdminPage() {
                                                             <TableCell>{formatTimestamp(tx.timestamp)}</TableCell>
                                                             <TableCell className="font-medium">{tx.schoolName}</TableCell>
                                                             <TableCell className="font-mono">{tx.cardId}</TableCell>
-                                                            <TableCell className="font-medium text-green-600">{formatCurrency(tx.amount)}</TableCell>
+                                                            <TableCell>{formatCurrency(tx.balanceBefore)}</TableCell>
+                                                            <TableCell className="font-medium text-green-600">
+                                                               +{formatCurrency(tx.amount)}
+                                                            </TableCell>
+                                                            <TableCell className="font-bold">
+                                                                {formatCurrency(tx.balanceAfter)}
+                                                            </TableCell>
                                                         </TableRow>
                                                     ))
                                                  ) : (
                                                     <TableRow>
-                                                        <TableCell colSpan={4} className="text-center h-24">
+                                                        <TableCell colSpan={6} className="text-center h-24">
                                                             No transactions have been recorded yet.
                                                         </TableCell>
                                                     </TableRow>
