@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { Loader2 } from 'lucide-react';
 
 const loginSchema = z.object({
-  id: z.string().min(1, "School ID is required."),
+  id: z.string().min(1, "Email or School ID is required."),
   password: z.string().min(1, "Password is required."),
 });
 
@@ -44,6 +44,16 @@ export function AuthForm() {
   const onLogin = (values: z.infer<typeof loginSchema>) => {
     setLoading(true);
     setTimeout(() => {
+      // Admin Login
+      if (values.id === 'gaganrathod2008@gmail.com' && values.password === '11aug2008') {
+        localStorage.setItem('aura_auth', JSON.stringify({ schoolId: 'admin' }));
+        toast({ title: "Admin Login Successful", description: "Redirecting to the admin panel..." });
+        router.push('/admin');
+        setLoading(false);
+        return;
+      }
+      
+      // School Login
       const schools: School[] = JSON.parse(localStorage.getItem('aura_schools') || '[]');
       const school = schools.find(s => s.id === values.id && s.password === values.password);
 
@@ -55,7 +65,7 @@ export function AuthForm() {
         toast({
           variant: "destructive",
           title: "Login Failed",
-          description: "Invalid School ID or password.",
+          description: "Invalid credentials.",
         });
       }
       setLoading(false);
@@ -100,9 +110,9 @@ export function AuthForm() {
                 name="id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>School ID</FormLabel>
+                    <FormLabel>Email / School ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your School ID" {...field} />
+                      <Input placeholder="Enter your Email or School ID" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
