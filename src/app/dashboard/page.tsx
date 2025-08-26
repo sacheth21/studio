@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { School, Card, Transaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History } from 'lucide-react';
+import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -34,6 +34,9 @@ export default function DashboardPage() {
     const [isUpdateNameOpen, setIsUpdateNameOpen] = useState(false);
     const [newName, setNewName] = useState('');
 
+    const [isUpdateNumbersOpen, setIsUpdateNumbersOpen] = useState(false);
+    const [phoneNumbers, setPhoneNumbers] = useState<string[]>([]);
+
 
     useEffect(() => {
         const authData = localStorage.getItem('aura_auth');
@@ -44,14 +47,8 @@ export default function DashboardPage() {
         const parsedAuth = JSON.parse(authData);
         if (parsedAuth.schoolId === 'admin') {
             setIsAdmin(true);
-            // Admin can view any school, but we need one selected.
-            // For now, let's not set an authSchoolId for admin, they'll need to select one.
-            // Or maybe the flow is they click from admin page?
-            // The flow is they click from admin page, which sets the schoolId.
-             const adminSelectedSchoolId = JSON.parse(localStorage.getItem('aura_admin_view') || 'null');
+            const adminSelectedSchoolId = JSON.parse(localStorage.getItem('aura_admin_view') || 'null');
              if (!adminSelectedSchoolId) {
-                // router.replace('/admin'); // maybe not ideal, they can't go to /dashboard directly
-                // return;
              }
              setAuthSchoolId(adminSelectedSchoolId);
 
@@ -116,7 +113,6 @@ export default function DashboardPage() {
         if (foundCard) {
             setSearchedCard(foundCard);
         } else {
-            // If card not found, create a new one for this school
             const newCard: Card = {
                 id: cardIdInput,
                 schoolId: authSchoolId!,
@@ -168,17 +164,14 @@ export default function DashboardPage() {
         const balanceBefore = searchedCard.balance;
         const balanceAfter = balanceBefore + amount;
 
-        // 1. Deduct from school wallet
         const updatedSchools = schools.map(s => 
             s.id === loggedInSchool.id ? { ...s, walletBalance: s.walletBalance - amount } : s
         );
 
-        // 2. Add to card balance
         const updatedCards = cards.map(c =>
             c.id === searchedCard.id ? { ...c, balance: balanceAfter } : c
         );
         
-        // 3. Create transaction record
         const newTransaction: Transaction = {
             id: `txn_${Date.now()}`,
             schoolId: loggedInSchool.id,
@@ -192,7 +185,6 @@ export default function DashboardPage() {
         };
         const updatedTransactions = [...transactions, newTransaction];
 
-        // 4. Update state and localStorage
         setSchools(updatedSchools);
         setCards(updatedCards);
         setTransactions(updatedTransactions);
@@ -205,6 +197,54 @@ export default function DashboardPage() {
         toast({ title: 'Success', description: `${formatCurrency(amount)} added to ${searchedCard.name}'s card.` });
         setIsAddMoneyOpen(false);
         setAmountToAdd('');
+        setIsSubmitting(false);
+    };
+    
+    const handlePhoneNumberChange = (index: number, value: string) => {
+        const newPhoneNumbers = [...phoneNumbers];
+        if (value.match(/^[0-9]{0,10}$/)) {
+            newPhoneNumbers[index] = value;
+            setPhoneNumbers(newPhoneNumbers);
+        }
+    };
+    
+    const handleAddPhoneNumber = () => {
+        if (phoneNumbers.length < 5) {
+            setPhoneNumbers([...phoneNumbers, '']);
+        }
+    };
+
+    const handleRemovePhoneNumber = (index: number) => {
+        const newPhoneNumbers = phoneNumbers.filter((_, i) => i !== index);
+        setPhoneNumbers(newPhoneNumbers);
+    };
+    
+    const openUpdateNumbersDialog = () => {
+        if (!searchedCard) return;
+        setPhoneNumbers([...searchedCard.phoneNumbers]);
+        setIsUpdateNumbersOpen(true);
+    };
+
+    const handleUpdateNumbers = () => {
+        if (!searchedCard) return;
+
+        const validNumbers = phoneNumbers.filter(num => num && num.length === 10);
+        if (validNumbers.length !== phoneNumbers.length) {
+            toast({ variant: 'destructive', title: 'Invalid Phone Numbers', description: 'All phone numbers must be exactly 10 digits.' });
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        const updatedCards = cards.map(c => 
+            c.id === searchedCard.id ? { ...c, phoneNumbers: validNumbers } : c
+        );
+        setCards(updatedCards);
+        localStorage.setItem('aura_cards', JSON.stringify(updatedCards));
+        setSearchedCard(prev => prev ? { ...prev, phoneNumbers: validNumbers } : null);
+
+        toast({ title: 'Success', description: 'Phone numbers updated.' });
+        setIsUpdateNumbersOpen(false);
         setIsSubmitting(false);
     };
 
@@ -300,13 +340,24 @@ export default function DashboardPage() {
                                         </CardContent>
                                     </UICard>
                                      <div>
-                                        <h4 className="font-medium mb-2">Registered Phone Numbers ({searchedCard.phoneNumbers.length}/5)</h4>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="font-medium">Registered Phone Numbers ({searchedCard.phoneNumbers.length}/5)</h4>
+                                            <Button variant="outline" size="sm" onClick={openUpdateNumbersDialog}>
+                                                <Pencil className="mr-2 h-3 w-3" />
+                                                Update Numbers
+                                            </Button>
+                                        </div>
                                         {searchedCard.phoneNumbers.length > 0 ? (
-                                        <div className="space-y-1 text-sm text-muted-foreground">
-                                            {searchedCard.phoneNumbers.map((num, i) => <p key={i}>{num}</p>)}
+                                        <div className="space-y-2 text-sm">
+                                            {searchedCard.phoneNumbers.map((num, i) => (
+                                                <div key={i} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                                                    <Phone className="h-4 w-4 text-muted-foreground"/>
+                                                    <span className="font-mono">{num}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                         ) : (
-                                            <p className="text-sm text-muted-foreground">No phone numbers added yet.</p>
+                                            <p className="text-sm text-muted-foreground text-center py-4">No phone numbers added yet.</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -427,6 +478,48 @@ export default function DashboardPage() {
                     <Button onClick={handleUpdateName} disabled={isSubmitting}>
                          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Changes
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isUpdateNumbersOpen} onOpenChange={setIsUpdateNumbersOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Update Phone Numbers</DialogTitle>
+                    <DialogDescription>
+                        Manage the phone numbers for {searchedCard?.name}. Each number must be 10 digits.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 max-h-[300px] overflow-y-auto pr-2">
+                    {phoneNumbers.map((number, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                            <Label htmlFor={`phone-${index}`} className="sr-only">Phone Number {index + 1}</Label>
+                            <Input
+                                id={`phone-${index}`}
+                                type="tel"
+                                value={number}
+                                onChange={(e) => handlePhoneNumberChange(index, e.target.value)}
+                                placeholder="10-digit number"
+                                className="flex-grow"
+                                maxLength={10}
+                            />
+                            <Button variant="ghost" size="icon" onClick={() => handleRemovePhoneNumber(index)} disabled={isSubmitting}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    ))}
+                    {phoneNumbers.length < 5 && (
+                         <Button variant="outline" onClick={handleAddPhoneNumber} disabled={isSubmitting}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Number
+                        </Button>
+                    )}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                    <Button onClick={handleUpdateNumbers} disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Numbers
                     </Button>
                 </DialogFooter>
             </DialogContent>
