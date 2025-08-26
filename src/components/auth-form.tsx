@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   id: z.string().min(1, "Email or School ID is required."),
@@ -30,6 +30,7 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [newSchoolId, setNewSchoolId] = useState<string | null>(null);
   const [showNewIdDialog, setShowNewIdDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -125,7 +126,13 @@ export function AuthForm() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter your password" {...field} />
+                      <div className="relative">
+                        <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" {...field} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
+                          <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -161,7 +168,13 @@ export function AuthForm() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Create a strong password" {...field} />
+                      <div className="relative">
+                        <Input type={showPassword ? "text" : "password"} placeholder="Create a strong password" {...field} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
+                           <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
