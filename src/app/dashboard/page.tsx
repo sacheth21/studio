@@ -5,22 +5,13 @@ import { useRouter } from 'next/navigation';
 import { School } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Gem, LogOut, Loader2, Wallet, PlusCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Gem, LogOut, Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { toast } = useToast();
     const [schools, setSchools] = useState<School[]>([]);
     const [loading, setLoading] = useState(true);
     const [authSchoolId, setAuthSchoolId] = useState<string | null>(null);
-    const [isAddMoneyOpen, setIsAddMoneyOpen] = useState(false);
-    const [amountToAdd, setAmountToAdd] = useState('');
-
 
     useEffect(() => {
         const authData = localStorage.getItem('aura_auth');
@@ -28,7 +19,13 @@ export default function DashboardPage() {
             router.replace('/');
             return;
         }
-        setAuthSchoolId(JSON.parse(authData).schoolId);
+        // Handle admin case, maybe redirect to admin page if they land here
+        const parsedAuth = JSON.parse(authData);
+        if (parsedAuth.schoolId === 'admin') {
+            router.replace('/admin');
+            return;
+        }
+        setAuthSchoolId(parsedAuth.schoolId);
 
         // Simulate fetching data
         setTimeout(() => {
@@ -52,35 +49,6 @@ export default function DashboardPage() {
             minimumFractionDigits: 2,
         }).format(amount);
     };
-    
-    const handleAddMoney = () => {
-        const amount = parseFloat(amountToAdd);
-        if (isNaN(amount) || amount <= 0) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Amount',
-                description: 'Please enter a valid positive number.',
-            });
-            return;
-        }
-
-        const updatedSchools = schools.map(school => {
-            if (school.id === authSchoolId) {
-                return { ...school, walletBalance: school.walletBalance + amount };
-            }
-            return school;
-        });
-
-        localStorage.setItem('aura_schools', JSON.stringify(updatedSchools));
-        setSchools(updatedSchools);
-        toast({
-            title: 'Success!',
-            description: `${formatCurrency(amount)} has been added to the wallet.`,
-        });
-        setIsAddMoneyOpen(false);
-        setAmountToAdd('');
-    };
-
 
     if (loading || !loggedInSchool) {
         return (
@@ -108,7 +76,7 @@ export default function DashboardPage() {
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl tracking-tight">{loggedInSchool.name}</CardTitle>
                         <CardDescription>
-                           Manage your school's wallet and details.
+                           View your school's details below.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -118,44 +86,6 @@ export default function DashboardPage() {
                                     <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
                                     <p className="text-3xl font-bold text-primary">{formatCurrency(loggedInSchool.walletBalance)}</p>
                                 </div>
-                                <Dialog open={isAddMoneyOpen} onOpenChange={setIsAddMoneyOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button size="lg">
-                                            <PlusCircle className="mr-2 h-5 w-5" />
-                                            Add Money
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[425px]">
-                                        <DialogHeader>
-                                            <DialogTitle>Add Money to Wallet</DialogTitle>
-                                            <DialogDescription>
-                                                Enter the amount you want to add to {loggedInSchool.name}'s wallet.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="amount" className="text-right">
-                                                    Amount (INR)
-                                                </Label>
-                                                <Input
-                                                    id="amount"
-                                                    type="number"
-                                                    value={amountToAdd}
-                                                    onChange={(e) => setAmountToAdd(e.target.value)}
-                                                    placeholder="e.g., 5000"
-                                                    className="col-span-3"
-                                                />
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <DialogClose asChild>
-                                                <Button variant="outline">Cancel</Button>
-                                            </DialogClose>
-                                            <Button onClick={handleAddMoney}>Confirm & Add</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-
                             </CardContent>
                         </Card>
                          <div className="text-sm text-muted-foreground">
