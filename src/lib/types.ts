@@ -14,7 +14,8 @@ export type Card = {
   balance: number;
 };
 
-export type Transaction = {
+// Transaction from School Wallet to Student Card
+export type CardTransaction = {
   id: string;
   schoolId: string;
   cardId: string;
@@ -25,3 +26,16 @@ export type Transaction = {
   balanceBefore: number;
   balanceAfter: number;
 };
+
+// Transaction from Admin to School Wallet
+export type AdminTransaction = {
+    id: string;
+    schoolId: string;
+    schoolName: string;
+    amount: number;
+    type: 'admin_top_up';
+    timestamp: string; // ISO string for date and time
+};
+
+// A union type for all possible transactions
+export type Transaction = CardTransaction | AdminTransaction;

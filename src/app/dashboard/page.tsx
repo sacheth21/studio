@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { School, Card, Transaction } from '@/lib/types';
+import { School, Card, CardTransaction, AdminTransaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone, Search } from 'lucide-react';
@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const generateInitialCards = (schoolId: string) => {
     return Array.from({ length: 20 }, (_, i) => {
@@ -31,7 +33,9 @@ export default function DashboardPage() {
     const { toast } = useToast();
     const [schools, setSchools] = useState<School[]>([]);
     const [cards, setCards] = useState<Card[]>([]);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [cardTransactions, setCardTransactions] = useState<CardTransaction[]>([]);
+    const [adminTransactions, setAdminTransactions] = useState<AdminTransaction[]>([]);
+
     
     const [loading, setLoading] = useState(true);
     const [authSchoolId, setAuthSchoolId] = useState<string | null>(null);
@@ -62,13 +66,8 @@ export default function DashboardPage() {
 
         if (parsedAuth.schoolId === 'admin') {
             setIsAdmin(true);
-            const adminSelectedSchoolId = localStorage.getItem('aura_admin_view');
-             if (adminSelectedSchoolId) {
-                currentSchoolId = JSON.parse(adminSelectedSchoolId);
-             } else {
-                 router.replace('/admin');
-                 return;
-             }
+            router.replace('/admin');
+            return;
         } else {
              currentSchoolId = parsedAuth.schoolId;
         }
@@ -78,7 +77,8 @@ export default function DashboardPage() {
         setTimeout(() => {
             const storedSchools = JSON.parse(localStorage.getItem('aura_schools') || '[]');
             let allCards = JSON.parse(localStorage.getItem('aura_cards') || '[]');
-            const storedTransactions = JSON.parse(localStorage.getItem('aura_transactions') || '[]');
+            const storedCardTransactions = JSON.parse(localStorage.getItem('aura_card_transactions') || '[]');
+            const storedAdminTransactions = JSON.parse(localStorage.getItem('aura_admin_transactions') || '[]');
             
             if (currentSchoolId) {
                 const schoolCardsExist = allCards.some((card: Card) => card.schoolId === currentSchoolId);
@@ -91,19 +91,27 @@ export default function DashboardPage() {
             
             setSchools(storedSchools);
             setCards(allCards);
-            setTransactions(storedTransactions);
+            setCardTransactions(storedCardTransactions);
+            setAdminTransactions(storedAdminTransactions);
             setLoading(false);
         }, 1000);
     }, [router]);
 
     const loggedInSchool = useMemo(() => schools.find(s => s.id === authSchoolId), [schools, authSchoolId]);
     
-    const schoolTransactions = useMemo(() => {
+    const schoolCardTransactions = useMemo(() => {
         if (!loggedInSchool) return [];
-        return transactions
+        return cardTransactions
             .filter(tx => tx.schoolId === loggedInSchool.id)
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [transactions, loggedInSchool]);
+    }, [cardTransactions, loggedInSchool]);
+
+    const schoolAdminTransactions = useMemo(() => {
+        if (!loggedInSchool) return [];
+        return adminTransactions
+            .filter(tx => tx.schoolId === loggedInSchool.id)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [adminTransactions, loggedInSchool]);
 
     const handleLogout = () => {
         localStorage.removeItem('aura_auth');
@@ -193,8 +201,8 @@ export default function DashboardPage() {
             c.id === searchedCard.id ? { ...c, balance: balanceAfter } : c
         );
         
-        const newTransaction: Transaction = {
-            id: `txn_${Date.now()}`,
+        const newTransaction: CardTransaction = {
+            id: `cardtxn_${Date.now()}`,
             schoolId: loggedInSchool.id,
             cardId: searchedCard.id,
             amount: amount,
@@ -204,16 +212,16 @@ export default function DashboardPage() {
             balanceBefore: balanceBefore,
             balanceAfter: balanceAfter
         };
-        const updatedTransactions = [...transactions, newTransaction];
+        const updatedTransactions = [...cardTransactions, newTransaction];
 
         setSchools(updatedSchools);
         setCards(updatedCards);
-        setTransactions(updatedTransactions);
+        setCardTransactions(updatedTransactions);
         setSearchedCard(prev => prev ? { ...prev, balance: balanceAfter } : null);
 
         localStorage.setItem('aura_schools', JSON.stringify(updatedSchools));
         localStorage.setItem('aura_cards', JSON.stringify(updatedCards));
-        localStorage.setItem('aura_transactions', JSON.stringify(updatedTransactions));
+        localStorage.setItem('aura_card_transactions', JSON.stringify(updatedTransactions));
 
         toast({ title: 'Success', description: `${formatCurrency(amount)} added to ${searchedCard.name}'s card.` });
         setIsAddMoneyOpen(false);
@@ -389,63 +397,111 @@ export default function DashboardPage() {
                     </CardContent>
                 </UICard>
 
-                <UICard className="shadow-lg border">
-                    <CardHeader>
-                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><History/> Transaction History</CardTitle>
-                        <CardDescription>
-                            A log of all funds added to student cards at this school.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date & Time</TableHead>
-                                        <TableHead>Card ID</TableHead>
-                                        <TableHead>Balance Before</TableHead>
-                                        <TableHead>Amount Added</TableHead>
-                                        <TableHead>Balance After</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                     {loading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                <Tabs defaultValue="card_transactions">
+                    <TabsList className="mb-4">
+                        <TabsTrigger value="card_transactions">Card Transaction History</TabsTrigger>
+                        <TabsTrigger value="admin_topups">Admin Top-up History</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="card_transactions">
+                        <UICard className="shadow-lg border">
+                            <CardHeader>
+                                <CardTitle className="font-headline text-2xl flex items-center gap-2"><History/> Card Transaction History</CardTitle>
+                                <CardDescription>
+                                    A log of all funds added to student cards at this school.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date & Time</TableHead>
+                                                <TableHead>Card ID</TableHead>
+                                                <TableHead>Balance Before</TableHead>
+                                                <TableHead>Amount Added</TableHead>
+                                                <TableHead>Balance After</TableHead>
                                             </TableRow>
-                                        ))
-                                     ) : schoolTransactions.length > 0 ? (
-                                        schoolTransactions.map((tx) => (
-                                            <TableRow key={tx.id}>
-                                                <TableCell>{formatTimestamp(tx.timestamp)}</TableCell>
-                                                <TableCell className="font-mono">{tx.cardId}</TableCell>
-                                                <TableCell>{formatCurrency(tx.balanceBefore)}</TableCell>
-                                                <TableCell className="font-medium text-green-600">
-                                                   +{formatCurrency(tx.amount)}
-                                                </TableCell>
-                                                <TableCell className="font-bold">
-                                                    {formatCurrency(tx.balanceAfter)}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                     ) : (
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loading ? (
+                                                Array.from({ length: 5 }).map((_, i) => (
+                                                    <TableRow key={i}>
+                                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : schoolCardTransactions.length > 0 ? (
+                                                schoolCardTransactions.map((tx) => (
+                                                    <TableRow key={tx.id}>
+                                                        <TableCell>{formatTimestamp(tx.timestamp)}</TableCell>
+                                                        <TableCell className="font-mono">{tx.cardId}</TableCell>
+                                                        <TableCell>{formatCurrency(tx.balanceBefore)}</TableCell>
+                                                        <TableCell className="font-medium text-green-600">
+                                                        +{formatCurrency(tx.amount)}
+                                                        </TableCell>
+                                                        <TableCell className="font-bold">
+                                                            {formatCurrency(tx.balanceAfter)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="text-center h-24">
+                                                        No card transactions have been recorded for this school yet.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </UICard>
+                    </TabsContent>
+                    <TabsContent value="admin_topups">
+                         <UICard className="shadow-lg border">
+                            <CardHeader>
+                                <CardTitle className="font-headline text-2xl flex items-center gap-2"><Wallet/> Admin Top-up History</CardTitle>
+                                <CardDescription>A log of all funds added to your school's wallet by the admin.</CardDescription>
+                            </CardHeader>
+                             <CardContent>
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center h-24">
-                                                No transactions have been recorded for this school yet.
-                                            </TableCell>
+                                            <TableHead>Date & Time</TableHead>
+                                            <TableHead className="text-right">Amount Received</TableHead>
                                         </TableRow>
-                                     )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </UICard>
-
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loading ? (
+                                             Array.from({ length: 3 }).map((_, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                                    <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : schoolAdminTransactions.length > 0 ? (
+                                            schoolAdminTransactions.map((tx) => (
+                                                <TableRow key={tx.id}>
+                                                    <TableCell>{formatTimestamp(tx.timestamp)}</TableCell>
+                                                    <TableCell className="text-right font-medium text-green-600">+{formatCurrency(tx.amount)}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="text-center h-24">
+                                                    No top-ups from admin have been recorded yet.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </UICard>
+                    </TabsContent>
+                </Tabs>
             </div>
         </main>
         
