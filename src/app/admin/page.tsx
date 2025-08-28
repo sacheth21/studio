@@ -42,8 +42,7 @@ export default function AdminPage() {
     };
     
     const handleSchoolClick = (schoolId: string) => {
-        localStorage.setItem('aura_auth', JSON.stringify({ schoolId: schoolId }));
-        router.push('/dashboard');
+        // This function is now empty to prevent navigation.
     };
 
     const formatCurrency = (amount: number) => {
@@ -182,12 +181,12 @@ export default function AdminPage() {
                                                 ) : schools.length > 0 ? (
                                                     schools.map((school) => (
                                                         <TableRow key={school.id} >
-                                                            <TableCell onClick={() => handleSchoolClick(school.id)} className="font-medium cursor-pointer hover:underline">{school.name}</TableCell>
-                                                            <TableCell onClick={() => handleSchoolClick(school.id)} className="font-medium text-primary cursor-pointer hover:underline">
+                                                            <TableCell className="font-medium">{school.name}</TableCell>
+                                                            <TableCell className="font-medium text-primary">
                                                                 {formatCurrency(school.walletBalance)}
                                                             </TableCell>
-                                                             <TableCell onClick={() => handleSchoolClick(school.id)} className="cursor-pointer hover:underline">{school.addedDate}</TableCell>
-                                                            <TableCell onClick={() => handleSchoolClick(school.id)} className="font-mono cursor-pointer hover:underline">{school.id}</TableCell>
+                                                             <TableCell>{school.addedDate}</TableCell>
+                                                            <TableCell className="font-mono">{school.id}</TableCell>
                                                             <TableCell className="text-right">
                                                                 <Button size="sm" onClick={() => openAddMoneyDialog(school)}>
                                                                     <PlusCircle className="mr-2 h-4 w-4"/>
