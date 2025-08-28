@@ -83,7 +83,7 @@ export function AuthForm() {
             name: values.name,
             password: values.password,
             addedDate: new Date().toLocaleDateString('en-US'),
-            walletBalance: Math.floor(Math.random() * 5000) + 1000,
+            walletBalance: 0,
         };
 
         schools.push(newSchool);
@@ -196,7 +196,7 @@ export function AuthForm() {
               Your school has been registered. Your new School ID is:
               <br />
               <strong className="text-lg text-primary font-mono my-2 block text-center bg-muted p-2 rounded-md">{newSchoolId}</strong>
-              Please use this ID to log in.
+              Please use this ID to log in. Your wallet is currently empty, please contact an admin to add funds.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
