@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { School, Card, CardTransaction, AdminTransaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone, Search } from 'lucide-react';
+import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone, Search, KeyRound } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -47,6 +47,7 @@ export default function DashboardPage() {
 
     const [isAddMoneyOpen, setIsAddMoneyOpen] = useState(false);
     const [amountToAdd, setAmountToAdd] = useState('');
+    const [password, setPassword] = useState('');
     
     const [isUpdateNameOpen, setIsUpdateNameOpen] = useState(false);
     const [newName, setNewName] = useState('');
@@ -177,19 +178,27 @@ export default function DashboardPage() {
     const handleAddMoneyToCard = () => {
         if (!searchedCard || !loggedInSchool) return;
         
+        setIsSubmitting(true);
+        
+        if (password !== loggedInSchool.password) {
+            toast({ variant: 'destructive', title: 'Incorrect Password', description: "The password you entered is incorrect." });
+            setIsSubmitting(false);
+            return;
+        }
+        
         const amount = parseFloat(amountToAdd);
         if (isNaN(amount) || amount <= 0) {
             toast({ variant: 'destructive', title: 'Invalid Amount' });
+            setIsSubmitting(false);
             return;
         }
 
         if (loggedInSchool.walletBalance < amount) {
             toast({ variant: 'destructive', title: 'Insufficient Funds', description: "The school's wallet does not have enough balance." });
+            setIsSubmitting(false);
             return;
         }
         
-        setIsSubmitting(true);
-
         const balanceBefore = searchedCard.balance;
         const balanceAfter = balanceBefore + amount;
 
@@ -212,7 +221,7 @@ export default function DashboardPage() {
             balanceBefore: balanceBefore,
             balanceAfter: balanceAfter
         };
-        const updatedTransactions = [...cardTransactions, newTransaction];
+        const updatedTransactions = [newTransaction, ...cardTransactions,];
 
         setSchools(updatedSchools);
         setCards(updatedCards);
@@ -226,6 +235,7 @@ export default function DashboardPage() {
         toast({ title: 'Success', description: `${formatCurrency(amount)} added to ${searchedCard.name}'s card.` });
         setIsAddMoneyOpen(false);
         setAmountToAdd('');
+        setPassword('');
         setIsSubmitting(false);
     };
     
@@ -275,6 +285,12 @@ export default function DashboardPage() {
         toast({ title: 'Success', description: 'Phone numbers updated.' });
         setIsUpdateNumbersOpen(false);
         setIsSubmitting(false);
+    };
+    
+    const openAddMoneyDialog = () => {
+        setAmountToAdd('');
+        setPassword('');
+        setIsAddMoneyOpen(true);
     };
 
 
@@ -358,7 +374,7 @@ export default function DashboardPage() {
                                             </CardTitle>
                                             <CardDescription>Card ID: <span className="font-mono bg-muted px-2 py-1 rounded-md">{searchedCard.id}</span></CardDescription>
                                         </div>
-                                        <Button size="sm" onClick={() => setIsAddMoneyOpen(true)}>
+                                        <Button size="sm" onClick={openAddMoneyDialog}>
                                             <PlusCircle className="mr-2 h-4 w-4"/> Add Money
                                         </Button>
                                     </div>
@@ -510,19 +526,35 @@ export default function DashboardPage() {
                 <DialogHeader>
                     <DialogTitle>Add Money to Card</DialogTitle>
                     <DialogDescription>
-                        Add funds to {searchedCard?.name}'s card. This will be deducted from your school's main wallet.
+                        Add funds to {searchedCard?.name}'s card. This will be deducted from your school's main wallet. Confirm with your password.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    <Label htmlFor="amount-card">Amount (INR)</Label>
-                    <Input
-                        id="amount-card"
-                        type="number"
-                        value={amountToAdd}
-                        onChange={(e) => setAmountToAdd(e.target.value)}
-                        placeholder="e.g., 500"
-                        disabled={isSubmitting}
-                    />
+                    <div>
+                        <Label htmlFor="amount-card">Amount (INR)</Label>
+                        <Input
+                            id="amount-card"
+                            type="number"
+                            value={amountToAdd}
+                            onChange={(e) => setAmountToAdd(e.target.value)}
+                            placeholder="e.g., 500"
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                     <div>
+                        <Label htmlFor="password-card">
+                            <KeyRound className="h-4 w-4 inline-block mr-1" />
+                            School Password
+                        </Label>
+                        <Input
+                            id="password-card"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your school password"
+                            disabled={isSubmitting}
+                        />
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>

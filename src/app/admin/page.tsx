@@ -5,7 +5,7 @@ import { School, AdminTransaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Gem, Loader2, LogOut, PlusCircle, History, ArrowRight, Wallet } from 'lucide-react';
+import { Gem, Loader2, LogOut, PlusCircle, History, ArrowRight, Wallet, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -20,9 +20,11 @@ export default function AdminPage() {
     const [schools, setSchools] = useState<School[]>([]);
     const [adminTransactions, setAdminTransactions] = useState<AdminTransaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
     const [isAddMoneyOpen, setIsAddMoneyOpen] = useState(false);
     const [amountToAdd, setAmountToAdd] = useState('');
+    const [password, setPassword] = useState('');
 
     useEffect(() => {
         setTimeout(() => {
@@ -61,11 +63,24 @@ export default function AdminPage() {
 
     const openAddMoneyDialog = (school: School) => {
         setSelectedSchool(school);
+        setAmountToAdd('');
+        setPassword('');
         setIsAddMoneyOpen(true);
     };
 
     const handleAddMoney = () => {
         if (!selectedSchool) return;
+        setIsSubmitting(true);
+
+        if (password !== '11aug2008') {
+            toast({
+                variant: 'destructive',
+                title: 'Incorrect Password',
+                description: 'The admin password you entered is incorrect.',
+            });
+            setIsSubmitting(false);
+            return;
+        }
 
         const amount = parseFloat(amountToAdd);
         if (isNaN(amount) || amount <= 0) {
@@ -74,6 +89,7 @@ export default function AdminPage() {
                 title: 'Invalid Amount',
                 description: 'Please enter a valid positive number.',
             });
+            setIsSubmitting(false);
             return;
         }
 
@@ -108,6 +124,8 @@ export default function AdminPage() {
         setIsAddMoneyOpen(false);
         setAmountToAdd('');
         setSelectedSchool(null);
+        setPassword('');
+        setIsSubmitting(false);
     };
 
     return (
@@ -248,7 +266,7 @@ export default function AdminPage() {
                     <DialogHeader>
                         <DialogTitle>Add Money to Wallet</DialogTitle>
                         <DialogDescription>
-                            Enter the amount you want to add to {selectedSchool?.name}'s wallet.
+                            Enter the amount to add to {selectedSchool?.name}'s wallet. Confirm with your admin password.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -263,14 +281,33 @@ export default function AdminPage() {
                                 onChange={(e) => setAmountToAdd(e.target.value)}
                                 placeholder="e.g., 5000"
                                 className="col-span-3"
+                                disabled={isSubmitting}
+                            />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="password" className="text-right">
+                                <KeyRound className="h-4 w-4 inline-block mr-1" />
+                                Password
+                            </Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Admin password"
+                                className="col-span-3"
+                                disabled={isSubmitting}
                             />
                         </div>
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
+                            <Button variant="outline" disabled={isSubmitting}>Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleAddMoney}>Confirm & Add</Button>
+                        <Button onClick={handleAddMoney} disabled={isSubmitting}>
+                           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           Confirm & Add
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
