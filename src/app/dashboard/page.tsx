@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { School, Card, CardTransaction, AdminTransaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone, Search, KeyRound } from 'lucide-react';
+import { Gem, LogOut, Loader2, Wallet, User, Pencil, PlusCircle, History, Trash2, Phone, Search, KeyRound, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -316,10 +316,16 @@ export default function DashboardPage() {
                            Back to Admin
                         </Button>
                     ) : (
-                         <Button variant="ghost" onClick={handleLogout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Logout
-                        </Button>
+                         <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => router.push('/profile')}>
+                                <Settings className="h-5 w-5" />
+                                <span className="sr-only">Profile Settings</span>
+                            </Button>
+                             <Button variant="ghost" onClick={handleLogout}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Logout
+                            </Button>
+                         </div>
                     )}
                 </header>
                 
