@@ -15,12 +15,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
-const generateInitialCards = (schoolId: string) => {
+const generateMasterCards = () => {
     return Array.from({ length: 20 }, (_, i) => {
         const cardId = (1001 + i).toString();
         return {
             id: cardId,
-            schoolId: schoolId,
+            schoolId: 'unassigned', // Initially unassigned
             name: `Student ${cardId}`,
             phoneNumbers: [],
             balance: 0,
@@ -81,13 +81,10 @@ export default function DashboardPage() {
             const storedCardTransactions = JSON.parse(localStorage.getItem('aura_card_transactions') || '[]');
             const storedAdminTransactions = JSON.parse(localStorage.getItem('aura_admin_transactions') || '[]');
             
-            if (currentSchoolId) {
-                const schoolCardsExist = allCards.some((card: Card) => card.schoolId === currentSchoolId);
-                if (!schoolCardsExist) {
-                    const newSchoolCards = generateInitialCards(currentSchoolId);
-                    allCards = [...allCards, ...newSchoolCards];
-                    localStorage.setItem('aura_cards', JSON.stringify(allCards));
-                }
+            // Initialize master cards if they don't exist
+            if (allCards.length === 0) {
+                allCards = generateMasterCards();
+                localStorage.setItem('aura_cards', JSON.stringify(allCards));
             }
             
             setSchools(storedSchools);
@@ -139,21 +136,45 @@ export default function DashboardPage() {
     };
 
     const handleCardSearch = () => {
-        if (!cardIdInput) {
+        if (!cardIdInput || !authSchoolId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a Card ID.' });
             return;
         }
 
-        const foundCard = cards.find(c => c.id === cardIdInput && c.schoolId === authSchoolId);
+        const foundCard = cards.find(c => c.id === cardIdInput);
 
         if (foundCard) {
-            setSearchedCard(foundCard);
+            // Card exists, now check if it belongs to this school or is unassigned
+            if (foundCard.schoolId === authSchoolId) {
+                setSearchedCard(foundCard);
+            } else if (foundCard.schoolId === 'unassigned') {
+                // Assign the card to this school
+                const updatedCards = cards.map(c => 
+                    c.id === cardIdInput ? { ...c, schoolId: authSchoolId } : c
+                );
+                setCards(updatedCards);
+                localStorage.setItem('aura_cards', JSON.stringify(updatedCards));
+                const newlyAssignedCard = updatedCards.find(c => c.id === cardIdInput);
+                setSearchedCard(newlyAssignedCard!);
+                toast({
+                    title: 'Card Assigned',
+                    description: `Card ID ${cardIdInput} has been assigned to your school.`
+                });
+            } else {
+                // Card belongs to another school
+                setSearchedCard(null);
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Card Not Available', 
+                    description: `Card ID ${cardIdInput} is already registered to another school.` 
+                });
+            }
         } else {
             setSearchedCard(null);
             toast({ 
                 variant: 'destructive', 
                 title: 'Card Not Found', 
-                description: `Card ID ${cardIdInput} is not registered for this school.` 
+                description: `Card ID ${cardIdInput} is not a valid registered card.` 
             });
         }
     };
@@ -644,3 +665,5 @@ export default function DashboardPage() {
         </>
     );
 }
+
+    
