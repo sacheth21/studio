@@ -196,7 +196,7 @@ export function AuthForm() {
               Your school has been registered. Your new School ID is:
               <br />
               <strong className="text-lg text-primary font-mono my-2 block text-center bg-muted p-2 rounded-md">{newSchoolId}</strong>
-              Please use this ID to log in. Your wallet is currently empty, please contact an admin to add funds.
+              Please use this ID and your password to log in. This password will also be required for card recharges. Your wallet is currently empty, please contact an admin to add funds.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
