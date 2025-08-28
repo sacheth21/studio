@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { School, AdminTransaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Gem, Loader2, LogOut, PlusCircle, History, ArrowRight, Wallet, KeyRound } from 'lucide-react';
+import { Gem, Loader2, LogOut, PlusCircle, Wallet, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,7 +42,7 @@ export default function AdminPage() {
     };
     
     const handleSchoolClick = (schoolId: string) => {
-        // This function is now empty to prevent navigation.
+        router.push(`/admin/school/${schoolId}`);
     };
 
     const formatCurrency = (amount: number) => {
@@ -180,7 +180,7 @@ export default function AdminPage() {
                                                     ))
                                                 ) : schools.length > 0 ? (
                                                     schools.map((school) => (
-                                                        <TableRow key={school.id} >
+                                                        <TableRow key={school.id} onClick={() => handleSchoolClick(school.id)} className="cursor-pointer">
                                                             <TableCell className="font-medium">{school.name}</TableCell>
                                                             <TableCell className="font-medium text-primary">
                                                                 {formatCurrency(school.walletBalance)}
@@ -188,7 +188,7 @@ export default function AdminPage() {
                                                              <TableCell>{school.addedDate}</TableCell>
                                                             <TableCell className="font-mono">{school.id}</TableCell>
                                                             <TableCell className="text-right">
-                                                                <Button size="sm" onClick={() => openAddMoneyDialog(school)}>
+                                                                <Button size="sm" onClick={(e) => { e.stopPropagation(); openAddMoneyDialog(school); }}>
                                                                     <PlusCircle className="mr-2 h-4 w-4"/>
                                                                     Add Money
                                                                 </Button>
