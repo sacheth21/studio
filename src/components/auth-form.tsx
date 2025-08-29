@@ -20,6 +20,8 @@ const loginSchema = z.object({
 });
 
 const registerSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  otp: z.string().length(6, "OTP must be 6 digits."),
   name: z.string().min(2, "School name must be at least 2 characters."),
   password: z.string().min(6, "Password must be at least 6 characters."),
 });
@@ -31,6 +33,9 @@ export function AuthForm() {
   const [newSchoolId, setNewSchoolId] = useState<string | null>(null);
   const [showNewIdDialog, setShowNewIdDialog] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -39,8 +44,49 @@ export function AuthForm() {
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", password: "" },
+    defaultValues: { email: "", otp: "", name: "", password: "" },
   });
+
+  const handleSendOtp = () => {
+    const email = registerForm.getValues("email");
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Email",
+        description: "Please enter a valid email address to receive an OTP.",
+      });
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(otp);
+      setOtpSent(true);
+      setLoading(false);
+      toast({
+        title: "OTP Sent (Simulated)",
+        description: `For testing purposes, your OTP is: ${otp}`,
+      });
+    }, 1000);
+  };
+  
+  const handleVerifyOtp = () => {
+    const otp = registerForm.getValues("otp");
+    if (otp === generatedOtp) {
+        setIsOtpVerified(true);
+        toast({
+            title: "Success",
+            description: "OTP verified successfully. You can now complete your registration.",
+        });
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid OTP",
+            description: "The OTP you entered is incorrect.",
+        });
+    }
+  };
+
 
   const onLogin = (values: z.infer<typeof loginSchema>) => {
     setLoading(true);
@@ -74,6 +120,14 @@ export function AuthForm() {
   };
 
   const onRegister = (values: z.infer<typeof registerSchema>) => {
+    if (!isOtpVerified) {
+        toast({
+            variant: "destructive",
+            title: "OTP Not Verified",
+            description: "Please verify your email with an OTP before registering.",
+        });
+        return;
+    }
     setLoading(true);
     setTimeout(() => {
         const schools: School[] = JSON.parse(localStorage.getItem('aura_schools') || '[]');
@@ -93,6 +147,8 @@ export function AuthForm() {
         setShowNewIdDialog(true);
         registerForm.reset();
         setLoading(false);
+        setOtpSent(false);
+        setIsOtpVerified(false);
     }, 1000);
   };
   
@@ -150,37 +206,77 @@ export function AuthForm() {
             <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-6 pt-4">
               <FormField
                 control={registerForm.control}
-                name="name"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>School Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter school name" {...field} />
-                    </FormControl>
+                    <FormLabel>School Email</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input placeholder="Enter your email" {...field} disabled={otpSent}/>
+                      </FormControl>
+                      <Button type="button" onClick={handleSendOtp} disabled={loading || otpSent}>
+                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Send OTP
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={registerForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showPassword ? "text" : "password"} placeholder="Create a strong password" {...field} />
-                        <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
-                           <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
-                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full !mt-8" disabled={loading}>
+              {otpSent && !isOtpVerified && (
+                 <FormField
+                    control={registerForm.control}
+                    name="otp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>One-Time Password</FormLabel>
+                         <div className="flex gap-2">
+                            <FormControl>
+                            <Input placeholder="Enter 6-digit OTP" {...field} />
+                            </FormControl>
+                            <Button type="button" onClick={handleVerifyOtp}>Verify</Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
+
+              <fieldset disabled={!isOtpVerified} className="space-y-6">
+                <FormField
+                    control={registerForm.control}
+                    name="name"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>School Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter school name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={registerForm.control}
+                    name="password"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                        <div className="relative">
+                            <Input type={showPassword ? "text" : "password"} placeholder="Create a strong password" {...field} />
+                            <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
+                            <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </fieldset>
+              <Button type="submit" className="w-full !mt-8" disabled={loading || !isOtpVerified}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Register
               </Button>
